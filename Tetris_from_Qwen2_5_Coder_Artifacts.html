@@ -45,6 +45,30 @@
     transform: translateX(-50%);
     font-size: 24px;
   }
+  #gameOverScreen {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #0a0a0a;
+    color: #39ff14;
+    padding: 20px;
+    border: 2px solid #39ff14;
+    text-align: center;
+  }
+  #gameOverScreen button {
+    background-color: #0a0a0a;
+    color: #39ff14;
+    border: 1px solid #39ff14;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    outline: none;
+  }
+  #gameOverScreen button:hover {
+    background-color: #1f1f1f;
+  }
 </style>
 </head>
 <body>
@@ -56,12 +80,19 @@
   <button onclick="rotate()">↑</button>
   <button onclick="moveDown()">↓</button>
 </div>
+<div id="gameOverScreen">
+  <h1>Game Over</h1>
+  <p>Your Score: <span id="finalScore">0</span></p>
+  <button onclick="restartGame()">Restart</button>
+</div>
 
 <script>
 const canvas = document.getElementById('tetris');
 const context = canvas.getContext('2d');
 
 context.scale(20, 20);
+
+let gameOver = false; // Flag to indicate if the game is over
 
 function arenaSweep() {
   let rowCount = 1;
@@ -105,23 +136,6 @@ function createMatrix(w, h) {
 
 function createPiece(type) {
   if (type === 'T') {
-    // T Shape
-    // Rotation 0:
-    // 0 0 0
-    // 1 1 1
-    // 0 1 0
-    // Rotation 1:
-    // 0 1 0
-    // 1 1 0
-    // 0 1 0
-    // Rotation 2:
-    // 0 1 0
-    // 1 1 1
-    // 0 0 0
-    // Rotation 3:
-    // 0 1 0
-    // 0 1 1
-    // 0 1 0
     return [
       [[0, 0, 0], [1, 1, 1], [0, 1, 0]],
       [[0, 1, 0], [1, 1, 0], [0, 1, 0]],
@@ -129,10 +143,6 @@ function createPiece(type) {
       [[0, 1, 0], [0, 1, 1], [0, 1, 0]],
     ];
   } else if (type === 'O') {
-    // O Shape (Square)
-    // Rotation 0-3:
-    // 2 2
-    // 2 2
     return [
       [[2, 2], [2, 2]],
       [[2, 2], [2, 2]],
@@ -140,23 +150,6 @@ function createPiece(type) {
       [[2, 2], [2, 2]],
     ];
   } else if (type === 'L') {
-    // L Shape
-    // Rotation 0:
-    // 0 0 0
-    // 3 3 3
-    // 0 0 3
-    // Rotation 1:
-    // 0 3 0
-    // 0 3 0
-    // 3 3 0
-    // Rotation 2:
-    // 3 0 0
-    // 3 3 3
-    // 0 0 0
-    // Rotation 3:
-    // 0 3 3
-    // 0 3 0
-    // 0 3 0
     return [
       [[0, 0, 0], [3, 3, 3], [0, 0, 3]],
       [[0, 3, 0], [0, 3, 0], [3, 3, 0]],
@@ -164,23 +157,6 @@ function createPiece(type) {
       [[0, 3, 3], [0, 3, 0], [0, 3, 0]],
     ];
   } else if (type === 'J') {
-    // J Shape
-    // Rotation 0:
-    // 0 0 0
-    // 4 4 4
-    // 4 0 0
-    // Rotation 1:
-    // 4 4 0
-    // 0 4 0
-    // 0 4 0
-    // Rotation 2:
-    // 0 0 4
-    // 4 4 4
-    // 0 0 0
-    // Rotation 3:
-    // 0 4 0
-    // 0 4 0
-    // 0 4 4
     return [
       [[0, 0, 0], [4, 4, 4], [4, 0, 0]],
       [[4, 4, 0], [0, 4, 0], [0, 4, 0]],
@@ -188,27 +164,6 @@ function createPiece(type) {
       [[0, 4, 0], [0, 4, 0], [0, 4, 4]],
     ];
   } else if (type === 'I') {
-    // I Shape (Line)
-    // Rotation 0:
-    // 0 0 0 0
-    // 5 5 5 5
-    // 0 0 0 0
-    // 0 0 0 0
-    // Rotation 1:
-    // 0 0 5 0
-    // 0 0 5 0
-    // 0 0 5 0
-    // 0 0 5 0
-    // Rotation 2:
-    // 0 0 0 0
-    // 0 0 0 0
-    // 5 5 5 5
-    // 0 0 0 0
-    // Rotation 3:
-    // 5 0 0 0
-    // 5 0 0 0
-    // 5 0 0 0
-    // 5 0 0 0
     return [
       [[0, 0, 0, 0], [5, 5, 5, 5], [0, 0, 0, 0], [0, 0, 0, 0]],
       [[0, 0, 5, 0], [0, 0, 5, 0], [0, 0, 5, 0], [0, 0, 5, 0]],
@@ -216,23 +171,6 @@ function createPiece(type) {
       [[5, 0, 0, 0], [5, 0, 0, 0], [5, 0, 0, 0], [5, 0, 0, 0]],
     ];
   } else if (type === 'S') {
-    // S Shape
-    // Rotation 0:
-    // 0 0 0
-    // 0 6 6
-    // 6 6 0
-    // Rotation 1:
-    // 6 0 0
-    // 6 6 0
-    // 0 6 0
-    // Rotation 2:
-    // 0 6 6
-    // 6 6 0
-    // 0 0 0
-    // Rotation 3:
-    // 0 6 0
-    // 0 6 6
-    // 0 0 6
     return [
       [[0, 0, 0], [0, 6, 6], [6, 6, 0]],
       [[6, 0, 0], [6, 6, 0], [0, 6, 0]],
@@ -240,23 +178,6 @@ function createPiece(type) {
       [[0, 6, 0], [0, 6, 6], [0, 0, 6]],
     ];
   } else if (type === 'Z') {
-    // Z Shape
-    // Rotation 0:
-    // 0 0 0
-    // 7 7 0
-    // 0 7 7
-    // Rotation 1:
-    // 0 7 0
-    // 7 7 0
-    // 7 0 0
-    // Rotation 2:
-    // 7 7 0
-    // 0 7 7
-    // 0 0 0
-    // Rotation 3:
-    // 0 0 7
-    // 0 7 7
-    // 0 7 0
     return [
       [[0, 0, 0], [7, 7, 0], [0, 7, 7]],
       [[0, 7, 0], [7, 7, 0], [7, 0, 0]],
@@ -303,6 +224,8 @@ let dropInterval = 1000;
 let lastTime = 0;
 
 function update(time = 0) {
+  if (gameOver) return; // Stop the game loop if the game is over
+
   const deltaTime = time - lastTime;
 
   dropCounter += deltaTime;
@@ -345,8 +268,11 @@ function playerReset() {
                  (player.matrix[0][0].length / 2 | 0);
   if (collide(arena, player)) {
     arena.forEach(row => row.fill(0));
+    document.getElementById('finalScore').innerText = player.score;
+    document.getElementById('gameOverScreen').style.display = 'block';
     player.score = 0;
     updateScore();
+    gameOver = true; // Set the game over flag
   }
 }
 
@@ -365,9 +291,19 @@ function playerRotate(dir) {
 
 function updateScore() {
   document.getElementById('score').innerText = 'Score: ' + player.score;
+  updateLevel();
+}
+
+let level = 1;
+
+function updateLevel() {
+  level = Math.floor(player.score / 1000) + 1;
+  dropInterval = 1000 / level;
 }
 
 document.addEventListener('keydown', event => {
+  if (gameOver) return; // Ignore key presses if the game is over
+
   event.preventDefault(); // Prevent default behavior of arrow keys
   if (event.keyCode === 37) {
     playerMove(-1);
@@ -405,19 +341,31 @@ updateScore();
 update();
 
 function moveLeft() {
+  if (gameOver) return; // Ignore key presses if the game is over
   playerMove(-1);
 }
 
 function moveRight() {
+  if (gameOver) return; // Ignore key presses if the game is over
   playerMove(1);
 }
 
 function rotate() {
+  if (gameOver) return; // Ignore key presses if the game is over
   playerRotate(1);
 }
 
 function moveDown() {
+  if (gameOver) return; // Ignore key presses if the game is over
   playerDrop();
+}
+
+function restartGame() {
+  document.getElementById('gameOverScreen').style.display = 'none';
+  gameOver = false; // Reset the game over flag
+  playerReset();
+  updateScore();
+  update(); // Restart the game loop
 }
 </script>
 </body>
