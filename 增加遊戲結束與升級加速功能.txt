@@ -1,0 +1,765 @@
+當然可以！以下是將你建議的程式碼整合到你的現有 HTML 和 JavaScript 中的完整版本。這樣你就可以直接使用這個增強版的 Cyberpunk Tetris 遊戲。
+
+完整的 HTML 和 JavaScript 程式碼
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cyberpunk Tetris</title>
+<style>
+  body {
+    background-color: #0a0a0a;
+    color: #39ff14;
+    font-family: 'Courier New', Courier, monospace;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    overflow: hidden; /* Prevent scrolling */
+  }
+  canvas {
+    border: 2px solid #39ff14;
+  }
+  .controls {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  .controls button {
+    background-color: #0a0a0a;
+    color: #39ff14;
+    border: 1px solid #39ff14;
+    padding: 10px 20px;
+    margin: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    outline: none;
+  }
+  .controls button:hover {
+    background-color: #1f1f1f;
+  }
+  #score {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 24px;
+  }
+  #gameOverScreen {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #0a0a0a;
+    color: #39ff14;
+    padding: 20px;
+    border: 2px solid #39ff14;
+    text-align: center;
+  }
+  #gameOverScreen button {
+    background-color: #0a0a0a;
+    color: #39ff14;
+    border: 1px solid #39ff14;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    outline: none;
+  }
+  #gameOverScreen button:hover {
+    background-color: #1f1f1f;
+  }
+</style>
+</head>
+<body>
+<canvas id="tetris" width="240" height="400"></canvas>
+<div id="score">Score: 0</div>
+<div class="controls">
+  <button onclick="moveLeft()">←</button>
+  <button onclick="moveRight()">→</button>
+  <button onclick="rotate()">↑</button>
+  <button onclick="moveDown()">↓</button>
+</div>
+<div id="gameOverScreen">
+  <h1>Game Over</h1>
+  <p>Your Score: <span id="finalScore">0</span></p>
+  <button onclick="restartGame()">Restart</button>
+</div>
+
+<script>
+const canvas = document.getElementById('tetris');
+const context = canvas.getContext('2d');
+
+context.scale(20, 20);
+
+function arenaSweep() {
+  let rowCount = 1;
+  outer: for (let y = arena.length - 1; y > 0; --y) {
+    for (let x = 0; x < arena[y].length; ++x) {
+      if (arena[y][x] === 0) {
+        continue outer;
+      }
+    }
+
+    const row = arena.splice(y, 1)[0].fill(0);
+    arena.unshift(row);
+    ++y;
+
+    player.score += rowCount * 10;
+    rowCount *= 2;
+  }
+}
+
+function collide(arena, player) {
+  const [m, o] = [player.matrix[player.currentRotation], player.pos];
+  for (let y = 0; y < m.length; ++y) {
+    for (let x = 0; x < m[y].length; ++x) {
+      if (m[y][x] !== 0 &&
+          (arena[y + o.y] &&
+           arena[y + o.y][x + o.x]) !== 0) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function createMatrix(w, h) {
+  const matrix = [];
+  while (h--) {
+    matrix.push(new Array(w).fill(0));
+  }
+  return matrix;
+}
+
+function createPiece(type) {
+  if (type === 'T') {
+    return [
+      [[0, 0, 0], [1, 1, 1], [0, 1, 0]],
+      [[0, 1, 0], [1, 1, 0], [0, 1, 0]],
+      [[0, 1, 0], [1, 1, 1], [0, 0, 0]],
+      [[0, 1, 0], [0, 1, 1], [0, 1, 0]],
+    ];
+  } else if (type === 'O') {
+    return [
+      [[2, 2], [2, 2]],
+      [[2, 2], [2, 2]],
+      [[2, 2], [2, 2]],
+      [[2, 2], [2, 2]],
+    ];
+  } else if (type === 'L') {
+    return [
+      [[0, 0, 0], [3, 3, 3], [0, 0, 3]],
+      [[0, 3, 0], [0, 3, 0], [3, 3, 0]],
+      [[3, 0, 0], [3, 3, 3], [0, 0, 0]],
+      [[0, 3, 3], [0, 3, 0], [0, 3, 0]],
+    ];
+  } else if (type === 'J') {
+    return [
+      [[0, 0, 0], [4, 4, 4], [4, 0, 0]],
+      [[4, 4, 0], [0, 4, 0], [0, 4, 0]],
+      [[0, 0, 4], [4, 4, 4], [0, 0, 0]],
+      [[0, 4, 0], [0, 4, 0], [0, 4, 4]],
+    ];
+  } else if (type === 'I') {
+    return [
+      [[0, 0, 0, 0], [5, 5, 5, 5], [0, 0, 0, 0], [0, 0, 0, 0]],
+      [[0, 0, 5, 0], [0, 0, 5, 0], [0, 0, 5, 0], [0, 0, 5, 0]],
+      [[0, 0, 0, 0], [0, 0, 0, 0], [5, 5, 5, 5], [0, 0, 0, 0]],
+      [[5, 0, 0, 0], [5, 0, 0, 0], [5, 0, 0, 0], [5, 0, 0, 0]],
+    ];
+  } else if (type === 'S') {
+    return [
+      [[0, 0, 0], [0, 6, 6], [6, 6, 0]],
+      [[6, 0, 0], [6, 6, 0], [0, 6, 0]],
+      [[0, 6, 6], [6, 6, 0], [0, 0, 0]],
+      [[0, 6, 0], [0, 6, 6], [0, 0, 6]],
+    ];
+  } else if (type === 'Z') {
+    return [
+      [[0, 0, 0], [7, 7, 0], [0, 7, 7]],
+      [[0, 7, 0], [7, 7, 0], [7, 0, 0]],
+      [[7, 7, 0], [0, 7, 7], [0, 0, 0]],
+      [[0, 0, 7], [0, 7, 7], [0, 7, 0]],
+    ];
+  }
+}
+
+function draw() {
+  context.fillStyle = '#0a0a0a';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+
+  drawMatrix(arena, {x: 0, y: 0});
+  drawMatrix(player.matrix[player.currentRotation], player.pos);
+}
+
+function drawMatrix(matrix, offset) {
+  matrix.forEach((row, y) => {
+    row.forEach((value, x) => {
+      if (value !== 0) {
+        context.fillStyle = colors[value];
+        context.fillRect(x + offset.x,
+                         y + offset.y,
+                         1, 1);
+      }
+    });
+  });
+}
+
+function merge(arena, player) {
+  player.matrix[player.currentRotation].forEach((row, y) => {
+    row.forEach((value, x) => {
+      if (value !== 0) {
+        arena[y + player.pos.y][x + player.pos.x] = value;
+      }
+    });
+  });
+}
+
+let dropCounter = 0;
+let dropInterval = 1000;
+
+let lastTime = 0;
+
+function update(time = 0) {
+  const deltaTime = time - lastTime;
+
+  dropCounter += deltaTime;
+  if (dropCounter > dropInterval) {
+    playerDrop();
+  }
+
+  lastTime = time;
+
+  draw();
+  requestAnimationFrame(update);
+}
+
+function playerDrop() {
+  player.pos.y++;
+  if (collide(arena, player)) {
+    player.pos.y--;
+    merge(arena, player);
+    playerReset();
+    arenaSweep();
+    updateScore();
+  }
+  dropCounter = 0;
+}
+
+function playerMove(dir) {
+  player.pos.x += dir;
+  if (collide(arena, player)) {
+    player.pos.x -= dir;
+  }
+}
+
+function playerReset() {
+  const pieces = 'ILJOTSZ';
+  const type = pieces[pieces.length * Math.random() | 0];
+  player.matrix = createPiece(type);
+  player.currentRotation = 0;
+  player.pos.y = 0;
+  player.pos.x = (arena[0].length / 2 | 0) -
+                 (player.matrix[0][0].length / 2 | 0);
+  if (collide(arena, player)) {
+    arena.forEach(row => row.fill(0));
+    document.getElementById('finalScore').innerText = player.score;
+    document.getElementById('gameOverScreen').style.display = 'block';
+    player.score = 0;
+    updateScore();
+  }
+}
+
+function playerRotate(dir) {
+  const previousRotation = player.currentRotation;
+  player.currentRotation += dir;
+  player.currentRotation = player.currentRotation % player.matrix.length;
+  if (player.currentRotation < 0) {
+    player.currentRotation += player.matrix.length;
+  }
+
+  if (collide(arena, player)) {
+    player.currentRotation = previousRotation;
+  }
+}
+
+function updateScore() {
+  document.getElementById('score').innerText = 'Score: ' + player.score;
+  updateLevel();
+}
+
+let level = 1;
+
+function updateLevel() {
+  level = Math.floor(player.score / 1000) + 1;
+  dropInterval = 1000 / level;
+}
+
+document.addEventListener('keydown', event => {
+  event.preventDefault(); // Prevent default behavior of arrow keys
+  if (event.keyCode === 37) {
+    playerMove(-1);
+  } else if (event.keyCode === 39) {
+    playerMove(1);
+  } else if (event.keyCode === 40) {
+    playerDrop();
+  } else if (event.keyCode === 38) { // Up arrow
+    playerRotate(1);
+  }
+});
+
+const colors = [
+  null,
+  '#FF0D72',
+  '#0DC2FF',
+  '#0DFF72',
+  '#F538FF',
+  '#FF8E0D',
+  '#FFE138',
+  '#3877FF',
+];
+
+const arena = createMatrix(12, 20);
+
+const player = {
+  pos: {x: 0, y: 0},
+  matrix: null,
+  currentRotation: 0,
+  score: 0,
+};
+
+playerReset();
+updateScore();
+update();
+
+function moveLeft() {
+  playerMove(-1);
+}
+
+function moveRight() {
+  playerMove(1);
+}
+
+function rotate() {
+  playerRotate(1);
+}
+
+function moveDown() {
+  playerDrop();
+}
+
+function restartGame() {
+  document.getElementById('gameOverScreen').style.display = 'none';
+  playerReset();
+  updateScore();
+}
+</script>
+</body>
+</html>
+說明
+遊戲結束畫面：
+新增了一個 div 元素 #gameOverScreen，當玩家輸掉遊戲時會顯示。
+在 playerReset 函數中，如果玩家撞到頂部，會顯示遊戲結束畫面並更新最終得分。
+新增了 restartGame 函數，用於重新開始遊戲。
+等級系統：
+新增了 level 變數和 updateLevel 函數，根據玩家的分數來調整遊戲速度。
+每當玩家的分數達到 1000 分的倍數時，遊戲速度會加快。
+你可以直接將上述程式碼複製並貼入你的 HTML 文件中，然後在瀏覽器中打開即可看到增強版的 Cyberpunk Tetris 遊戲。希望這些增強功能能讓你的遊戲更加有趣！
+
+
+gameover的時候 遊戲沒有暫停
+
+
+好的，我們可以在遊戲結束時暫停遊戲循環，以確保遊戲不會在遊戲結束後繼續運行。我們可以通过在 playerReset 函數中添加一個標誌來控制遊戲是否應該繼續運行。
+
+以下是修改後的完整程式碼，包括遊戲結束時暫停遊戲循環的功能：
+
+完整的 HTML 和 JavaScript 程式碼
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cyberpunk Tetris</title>
+<style>
+  body {
+    background-color: #0a0a0a;
+    color: #39ff14;
+    font-family: 'Courier New', Courier, monospace;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    overflow: hidden; /* Prevent scrolling */
+  }
+  canvas {
+    border: 2px solid #39ff14;
+  }
+  .controls {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  .controls button {
+    background-color: #0a0a0a;
+    color: #39ff14;
+    border: 1px solid #39ff14;
+    padding: 10px 20px;
+    margin: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    outline: none;
+  }
+  .controls button:hover {
+    background-color: #1f1f1f;
+  }
+  #score {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 24px;
+  }
+  #gameOverScreen {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #0a0a0a;
+    color: #39ff14;
+    padding: 20px;
+    border: 2px solid #39ff14;
+    text-align: center;
+  }
+  #gameOverScreen button {
+    background-color: #0a0a0a;
+    color: #39ff14;
+    border: 1px solid #39ff14;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    outline: none;
+  }
+  #gameOverScreen button:hover {
+    background-color: #1f1f1f;
+  }
+</style>
+</head>
+<body>
+<canvas id="tetris" width="240" height="400"></canvas>
+<div id="score">Score: 0</div>
+<div class="controls">
+  <button onclick="moveLeft()">←</button>
+  <button onclick="moveRight()">→</button>
+  <button onclick="rotate()">↑</button>
+  <button onclick="moveDown()">↓</button>
+</div>
+<div id="gameOverScreen">
+  <h1>Game Over</h1>
+  <p>Your Score: <span id="finalScore">0</span></p>
+  <button onclick="restartGame()">Restart</button>
+</div>
+
+<script>
+const canvas = document.getElementById('tetris');
+const context = canvas.getContext('2d');
+
+context.scale(20, 20);
+
+let gameOver = false; // Flag to indicate if the game is over
+
+function arenaSweep() {
+  let rowCount = 1;
+  outer: for (let y = arena.length - 1; y > 0; --y) {
+    for (let x = 0; x < arena[y].length; ++x) {
+      if (arena[y][x] === 0) {
+        continue outer;
+      }
+    }
+
+    const row = arena.splice(y, 1)[0].fill(0);
+    arena.unshift(row);
+    ++y;
+
+    player.score += rowCount * 10;
+    rowCount *= 2;
+  }
+}
+
+function collide(arena, player) {
+  const [m, o] = [player.matrix[player.currentRotation], player.pos];
+  for (let y = 0; y < m.length; ++y) {
+    for (let x = 0; x < m[y].length; ++x) {
+      if (m[y][x] !== 0 &&
+          (arena[y + o.y] &&
+           arena[y + o.y][x + o.x]) !== 0) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function createMatrix(w, h) {
+  const matrix = [];
+  while (h--) {
+    matrix.push(new Array(w).fill(0));
+  }
+  return matrix;
+}
+
+function createPiece(type) {
+  if (type === 'T') {
+    return [
+      [[0, 0, 0], [1, 1, 1], [0, 1, 0]],
+      [[0, 1, 0], [1, 1, 0], [0, 1, 0]],
+      [[0, 1, 0], [1, 1, 1], [0, 0, 0]],
+      [[0, 1, 0], [0, 1, 1], [0, 1, 0]],
+    ];
+  } else if (type === 'O') {
+    return [
+      [[2, 2], [2, 2]],
+      [[2, 2], [2, 2]],
+      [[2, 2], [2, 2]],
+      [[2, 2], [2, 2]],
+    ];
+  } else if (type === 'L') {
+    return [
+      [[0, 0, 0], [3, 3, 3], [0, 0, 3]],
+      [[0, 3, 0], [0, 3, 0], [3, 3, 0]],
+      [[3, 0, 0], [3, 3, 3], [0, 0, 0]],
+      [[0, 3, 3], [0, 3, 0], [0, 3, 0]],
+    ];
+  } else if (type === 'J') {
+    return [
+      [[0, 0, 0], [4, 4, 4], [4, 0, 0]],
+      [[4, 4, 0], [0, 4, 0], [0, 4, 0]],
+      [[0, 0, 4], [4, 4, 4], [0, 0, 0]],
+      [[0, 4, 0], [0, 4, 0], [0, 4, 4]],
+    ];
+  } else if (type === 'I') {
+    return [
+      [[0, 0, 0, 0], [5, 5, 5, 5], [0, 0, 0, 0], [0, 0, 0, 0]],
+      [[0, 0, 5, 0], [0, 0, 5, 0], [0, 0, 5, 0], [0, 0, 5, 0]],
+      [[0, 0, 0, 0], [0, 0, 0, 0], [5, 5, 5, 5], [0, 0, 0, 0]],
+      [[5, 0, 0, 0], [5, 0, 0, 0], [5, 0, 0, 0], [5, 0, 0, 0]],
+    ];
+  } else if (type === 'S') {
+    return [
+      [[0, 0, 0], [0, 6, 6], [6, 6, 0]],
+      [[6, 0, 0], [6, 6, 0], [0, 6, 0]],
+      [[0, 6, 6], [6, 6, 0], [0, 0, 0]],
+      [[0, 6, 0], [0, 6, 6], [0, 0, 6]],
+    ];
+  } else if (type === 'Z') {
+    return [
+      [[0, 0, 0], [7, 7, 0], [0, 7, 7]],
+      [[0, 7, 0], [7, 7, 0], [7, 0, 0]],
+      [[7, 7, 0], [0, 7, 7], [0, 0, 0]],
+      [[0, 0, 7], [0, 7, 7], [0, 7, 0]],
+    ];
+  }
+}
+
+function draw() {
+  context.fillStyle = '#0a0a0a';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+
+  drawMatrix(arena, {x: 0, y: 0});
+  drawMatrix(player.matrix[player.currentRotation], player.pos);
+}
+
+function drawMatrix(matrix, offset) {
+  matrix.forEach((row, y) => {
+    row.forEach((value, x) => {
+      if (value !== 0) {
+        context.fillStyle = colors[value];
+        context.fillRect(x + offset.x,
+                         y + offset.y,
+                         1, 1);
+      }
+    });
+  });
+}
+
+function merge(arena, player) {
+  player.matrix[player.currentRotation].forEach((row, y) => {
+    row.forEach((value, x) => {
+      if (value !== 0) {
+        arena[y + player.pos.y][x + player.pos.x] = value;
+      }
+    });
+  });
+}
+
+let dropCounter = 0;
+let dropInterval = 1000;
+
+let lastTime = 0;
+
+function update(time = 0) {
+  if (gameOver) return; // Stop the game loop if the game is over
+
+  const deltaTime = time - lastTime;
+
+  dropCounter += deltaTime;
+  if (dropCounter > dropInterval) {
+    playerDrop();
+  }
+
+  lastTime = time;
+
+  draw();
+  requestAnimationFrame(update);
+}
+
+function playerDrop() {
+  player.pos.y++;
+  if (collide(arena, player)) {
+    player.pos.y--;
+    merge(arena, player);
+    playerReset();
+    arenaSweep();
+    updateScore();
+  }
+  dropCounter = 0;
+}
+
+function playerMove(dir) {
+  player.pos.x += dir;
+  if (collide(arena, player)) {
+    player.pos.x -= dir;
+  }
+}
+
+function playerReset() {
+  const pieces = 'ILJOTSZ';
+  const type = pieces[pieces.length * Math.random() | 0];
+  player.matrix = createPiece(type);
+  player.currentRotation = 0;
+  player.pos.y = 0;
+  player.pos.x = (arena[0].length / 2 | 0) -
+                 (player.matrix[0][0].length / 2 | 0);
+  if (collide(arena, player)) {
+    arena.forEach(row => row.fill(0));
+    document.getElementById('finalScore').innerText = player.score;
+    document.getElementById('gameOverScreen').style.display = 'block';
+    player.score = 0;
+    updateScore();
+    gameOver = true; // Set the game over flag
+  }
+}
+
+function playerRotate(dir) {
+  const previousRotation = player.currentRotation;
+  player.currentRotation += dir;
+  player.currentRotation = player.currentRotation % player.matrix.length;
+  if (player.currentRotation < 0) {
+    player.currentRotation += player.matrix.length;
+  }
+
+  if (collide(arena, player)) {
+    player.currentRotation = previousRotation;
+  }
+}
+
+function updateScore() {
+  document.getElementById('score').innerText = 'Score: ' + player.score;
+  updateLevel();
+}
+
+let level = 1;
+
+function updateLevel() {
+  level = Math.floor(player.score / 1000) + 1;
+  dropInterval = 1000 / level;
+}
+
+document.addEventListener('keydown', event => {
+  if (gameOver) return; // Ignore key presses if the game is over
+
+  event.preventDefault(); // Prevent default behavior of arrow keys
+  if (event.keyCode === 37) {
+    playerMove(-1);
+  } else if (event.keyCode === 39) {
+    playerMove(1);
+  } else if (event.keyCode === 40) {
+    playerDrop();
+  } else if (event.keyCode === 38) { // Up arrow
+    playerRotate(1);
+  }
+});
+
+const colors = [
+  null,
+  '#FF0D72',
+  '#0DC2FF',
+  '#0DFF72',
+  '#F538FF',
+  '#FF8E0D',
+  '#FFE138',
+  '#3877FF',
+];
+
+const arena = createMatrix(12, 20);
+
+const player = {
+  pos: {x: 0, y: 0},
+  matrix: null,
+  currentRotation: 0,
+  score: 0,
+};
+
+playerReset();
+updateScore();
+update();
+
+function moveLeft() {
+  if (gameOver) return; // Ignore key presses if the game is over
+  playerMove(-1);
+}
+
+function moveRight() {
+  if (gameOver) return; // Ignore key presses if the game is over
+  playerMove(1);
+}
+
+function rotate() {
+  if (gameOver) return; // Ignore key presses if the game is over
+  playerRotate(1);
+}
+
+function moveDown() {
+  if (gameOver) return; // Ignore key presses if the game is over
+  playerDrop();
+}
+
+function restartGame() {
+  document.getElementById('gameOverScreen').style.display = 'none';
+  gameOver = false; // Reset the game over flag
+  playerReset();
+  updateScore();
+  update(); // Restart the game loop
+}
+</script>
+</body>
+</html>
+主要修改點
+新增 gameOver 標誌：
+在 playerReset 函數中，如果玩家撞到頂部，會設置 gameOver 為 true，表示遊戲結束。
+在 update 函數中，如果 gameOver 為 true，則停止遊戲循環。
+忽略遊戲結束後的鍵盤事件：
+在 document.addEventListener('keydown', ...) 中，如果 gameOver 為 true，則忽略所有鍵盤事件。
+在 moveLeft, moveRight, rotate, moveDown 函數中，如果 gameOver 為 true，則忽略這些動作。
+重啟遊戲：
+在 restartGame 函數中，重設 gameOver 為 false，並重新開始遊戲循環。
+這樣修改後，當遊戲結束時，遊戲會暫停，並且玩家需要點擊「Restart」按鈕才能重新開始遊戲。希望這些修改能符合你的需求！
